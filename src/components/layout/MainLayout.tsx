@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { AppSidebar } from './AppSidebar';
+import { ReactNode, useState } from 'react';
+import { AppSidebar, MobileMenuButton } from './AppSidebar';
 import { Header } from './Header';
 
 interface MainLayoutProps {
@@ -9,12 +9,18 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title, subtitle }: MainLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar />
-      <div className="ml-64">
-        <Header title={title} subtitle={subtitle} />
-        <main className="p-6">
+      <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="lg:ml-64">
+        <Header 
+          title={title} 
+          subtitle={subtitle} 
+          menuButton={<MobileMenuButton onClick={() => setSidebarOpen(true)} />}
+        />
+        <main className="p-4 md:p-6">
           {children}
         </main>
       </div>
