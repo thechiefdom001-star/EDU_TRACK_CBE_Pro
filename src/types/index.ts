@@ -97,18 +97,27 @@ export interface Teacher {
 }
 
 // Assessment/Grade Interface
+export type ExamType = 'cat1' | 'cat2' | 'endTerm';
+
 export interface Assessment {
   id: string;
   studentId: string;
   subject: string;
   term: Term;
   year: number;
+  examType: ExamType;
   grade: GradeLevel;
   points: number;
   remarks?: string;
   teacherId: string;
   dateRecorded: string;
 }
+
+export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
+  cat1: 'CAT 1',
+  cat2: 'CAT 2',
+  endTerm: 'End Term',
+};
 
 // Attendance Interface
 export interface Attendance {

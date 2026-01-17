@@ -32,6 +32,7 @@ export default function Assessments() {
     subject: '',
     term: 1 as Term,
     year: new Date().getFullYear(),
+    examType: 'endTerm' as 'cat1' | 'cat2' | 'endTerm',
     grade: 'ME1' as GradeLevel,
     remarks: '',
     teacherId: '',
@@ -61,7 +62,7 @@ export default function Assessments() {
     setIsAddDialogOpen(false);
     setFormData({
       studentId: '', subject: '', term: 1, year: new Date().getFullYear(),
-      grade: 'ME1', remarks: '', teacherId: ''
+      examType: 'endTerm', grade: 'ME1', remarks: '', teacherId: ''
     });
     toast.success('Assessment recorded successfully!');
   };
