@@ -9,37 +9,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { FeeStructure, SchoolLevel, Term } from '@/types';
-import { formatCurrency, calculateTotalFees, generateId } from '@/lib/storage';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FeeStructure, SchoolLevel, Term, FeeItem } from '@/types';
+import { formatCurrency } from '@/lib/storage';
 import { toast } from 'sonner';
-import { Save, School, Wallet, Bell, Shield } from 'lucide-react';
+import { Save, School, Wallet, Bell, Shield, Plus, Upload } from 'lucide-react';
+import { FeeItemCard } from '@/components/common/FeeItemCard';
 
 export default function Settings() {
-  const { feeStructures, addFeeStructure, updateFeeStructure } = useSchool();
+  const { 
+    schoolInfo, updateSchoolInfo,
+    feeStructures, addFeeStructure, updateFeeStructure,
+    feeItems, addFeeItem, updateFeeItem, deleteFeeItem
+  } = useSchool();
+  
   const [selectedTerm, setSelectedTerm] = useState<Term>(1);
   const [selectedLevel, setSelectedLevel] = useState<SchoolLevel>('primary');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [isAddFeeItemOpen, setIsAddFeeItemOpen] = useState(false);
+  const [newFeeItem, setNewFeeItem] = useState({ key: '', label: '', description: '' });
+
+  // School info form
+  const [schoolForm, setSchoolForm] = useState(schoolInfo);
 
   const currentStructure = feeStructures.find(
     f => f.term === selectedTerm && f.schoolLevel === selectedLevel && f.year === selectedYear
   );
 
   const [feeData, setFeeData] = useState<Partial<FeeStructure>>(currentStructure || {
-    tuitionFees: 0,
-    admissionFees: 0,
-    assessmentFees: 0,
-    schoolIdFees: 0,
-    remedialFees: 0,
-    bookFund: 0,
-    uniformFees: 0,
-    boardingFees: 0,
-    lunchFees: 0,
-    breakfastFees: 0,
-    tripFees: 0,
-    diaryFees: 0,
-    projectFees: 0,
-    ptaFees: 0,
-    developmentFees: 0,
+    tuitionFees: 0, admissionFees: 0, assessmentFees: 0, schoolIdFees: 0,
+    remedialFees: 0, bookFund: 0, uniformFees: 0, boardingFees: 0,
+    lunchFees: 0, breakfastFees: 0, tripFees: 0, diaryFees: 0,
+    projectFees: 0, ptaFees: 0, developmentFees: 0,
   });
 
   const handleLoadStructure = () => {
@@ -76,23 +77,40 @@ export default function Settings() {
     toast.success('Fee structure saved successfully!');
   };
 
-  const feeFields = [
-    { key: 'tuitionFees', label: 'Tuition Fees' },
-    { key: 'admissionFees', label: 'Admission Fees' },
-    { key: 'assessmentFees', label: 'Assessment Fees' },
-    { key: 'schoolIdFees', label: 'School ID Fees' },
-    { key: 'remedialFees', label: 'Remedial Fees' },
-    { key: 'bookFund', label: 'Book Fund' },
-    { key: 'uniformFees', label: 'Uniform Fees' },
-    { key: 'boardingFees', label: 'Boarding Fees' },
-    { key: 'lunchFees', label: 'Lunch Fees' },
-    { key: 'breakfastFees', label: 'Breakfast Fees' },
-    { key: 'tripFees', label: 'Trip Fees' },
-    { key: 'diaryFees', label: 'Diary Fees' },
-    { key: 'projectFees', label: 'Project Fees' },
-    { key: 'ptaFees', label: 'PTA Fees' },
-    { key: 'developmentFees', label: 'Development Fees' },
-  ];
+  const handleSaveSchoolInfo = () => {
+    updateSchoolInfo(schoolForm);
+    toast.success('School information updated!');
+  };
+
+  const handleAddFeeItem = () => {
+    if (!newFeeItem.label) {
+      toast.error('Please enter a fee item name');
+      return;
+    }
+    addFeeItem({
+      key: newFeeItem.key || newFeeItem.label.toLowerCase().replace(/\s+/g, '') + 'Fees',
+      label: newFeeItem.label,
+      description: newFeeItem.description,
+      enabled: true,
+    });
+    setNewFeeItem({ key: '', label: '', description: '' });
+    setIsAddFeeItemOpen(false);
+    toast.success('Fee item added!');
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSchoolForm({ ...schoolForm, logo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Get enabled fee items for the structure form
+  const enabledFeeItems = feeItems.filter(item => item.enabled);
 
   const totalFees = Object.entries(feeData)
     .filter(([key]) => key.includes('Fees') || key.includes('Fund'))
@@ -121,25 +139,45 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="fees" className="space-y-6">
+          {/* Fee Items Management */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Fee Items</CardTitle>
+                <CardDescription>Enable/disable fee items to show in fee structure</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddFeeItemOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Fee Item
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {feeItems.map((item) => (
+                  <FeeItemCard
+                    key={item.id}
+                    item={item}
+                    onToggle={(id, enabled) => updateFeeItem(id, { enabled })}
+                    onEdit={(id, data) => updateFeeItem(id, data)}
+                    onDelete={deleteFeeItem}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Fee Structure Configuration */}
           <Card>
             <CardHeader>
               <CardTitle>Fee Structure Configuration</CardTitle>
-              <CardDescription>
-                Set up fee structures for each term and school level
-              </CardDescription>
+              <CardDescription>Set up fee amounts for each term and school level</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Selectors */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Year</Label>
-                  <Select 
-                    value={selectedYear.toString()} 
-                    onValueChange={(v) => setSelectedYear(parseInt(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="2024">2024</SelectItem>
                       <SelectItem value="2025">2025</SelectItem>
@@ -149,13 +187,8 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label>Term</Label>
-                  <Select 
-                    value={selectedTerm.toString()} 
-                    onValueChange={(v) => setSelectedTerm(parseInt(v) as Term)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={selectedTerm.toString()} onValueChange={(v) => setSelectedTerm(parseInt(v) as Term)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">Term 1</SelectItem>
                       <SelectItem value="2">Term 2</SelectItem>
@@ -165,13 +198,8 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label>School Level</Label>
-                  <Select 
-                    value={selectedLevel} 
-                    onValueChange={(v) => setSelectedLevel(v as SchoolLevel)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={selectedLevel} onValueChange={(v) => setSelectedLevel(v as SchoolLevel)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="primary">Primary</SelectItem>
                       <SelectItem value="junior">Junior (Grade 6-9)</SelectItem>
@@ -180,31 +208,24 @@ export default function Settings() {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <Button variant="outline" onClick={handleLoadStructure} className="w-full">
-                    Load Structure
-                  </Button>
+                  <Button variant="outline" onClick={handleLoadStructure} className="w-full">Load Structure</Button>
                 </div>
               </div>
 
-              {/* Fee Fields */}
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {feeFields.map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <Label className="text-sm">{field.label}</Label>
+                {enabledFeeItems.map((item) => (
+                  <div key={item.key} className="space-y-2">
+                    <Label className="text-sm">{item.label}</Label>
                     <Input 
                       type="number"
-                      value={feeData[field.key as keyof FeeStructure] || 0}
-                      onChange={(e) => setFeeData({
-                        ...feeData, 
-                        [field.key]: parseInt(e.target.value) || 0
-                      })}
+                      value={feeData[item.key as keyof FeeStructure] || 0}
+                      onChange={(e) => setFeeData({...feeData, [item.key]: parseInt(e.target.value) || 0})}
                       className="text-right"
                     />
                   </div>
                 ))}
               </div>
 
-              {/* Total & Save */}
               <div className="flex items-center justify-between pt-4 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Fees</p>
@@ -217,84 +238,63 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Existing Structures */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Saved Fee Structures</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {feeStructures.map((structure) => (
-                  <div 
-                    key={structure.id} 
-                    className="p-4 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setSelectedTerm(structure.term);
-                      setSelectedLevel(structure.schoolLevel);
-                      setSelectedYear(structure.year);
-                      setFeeData(structure);
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium capitalize">{structure.schoolLevel}</span>
-                      <span className="text-sm text-muted-foreground">
-                        Term {structure.term}, {structure.year}
-                      </span>
-                    </div>
-                    <p className="text-xl font-bold text-primary">
-                      {formatCurrency(
-                        Object.entries(structure)
-                          .filter(([key]) => key.includes('Fees') || key.includes('Fund'))
-                          .reduce((sum, [_, value]) => sum + (Number(value) || 0), 0)
-                      )}
-                    </p>
-                  </div>
-                ))}
-                {feeStructures.length === 0 && (
-                  <p className="text-muted-foreground col-span-3 text-center py-8">
-                    No fee structures configured yet
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="school">
           <Card>
             <CardHeader>
               <CardTitle>School Information</CardTitle>
-              <CardDescription>Basic school details and configuration</CardDescription>
+              <CardDescription>Basic school details used in printouts and receipts</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Logo Upload */}
+              <div className="flex items-center gap-6">
+                <div className="h-24 w-24 border-2 border-dashed rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                  {schoolForm.logo ? (
+                    <img src={schoolForm.logo} alt="School Logo" className="h-full w-full object-contain" />
+                  ) : (
+                    <span className="text-4xl">🏫</span>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="logo-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-muted transition-colors">
+                      <Upload className="h-4 w-4" />
+                      Upload Logo
+                    </div>
+                  </Label>
+                  <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  <p className="text-xs text-muted-foreground mt-2">PNG, JPG up to 2MB</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>School Name</Label>
-                  <Input defaultValue="EduKenya Academy" />
+                  <Input value={schoolForm.name} onChange={(e) => setSchoolForm({...schoolForm, name: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label>School Motto</Label>
-                  <Input defaultValue="Excellence Through Competency" />
+                  <Input value={schoolForm.motto || ''} onChange={(e) => setSchoolForm({...schoolForm, motto: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Address</Label>
+                  <Input value={schoolForm.address} onChange={(e) => setSchoolForm({...schoolForm, address: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label>County</Label>
-                  <Input defaultValue="Nairobi" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Sub-County</Label>
-                  <Input defaultValue="Westlands" />
+                  <Input value={schoolForm.county || ''} onChange={(e) => setSchoolForm({...schoolForm, county: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Phone</Label>
-                  <Input defaultValue="+254 712 345 678" />
+                  <Input value={schoolForm.phone} onChange={(e) => setSchoolForm({...schoolForm, phone: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input defaultValue="info@edukenya.ac.ke" />
+                  <Input value={schoolForm.email} onChange={(e) => setSchoolForm({...schoolForm, email: e.target.value})} />
                 </div>
               </div>
-              <Button className="mt-4">
+              <Button onClick={handleSaveSchoolInfo}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </Button>
@@ -318,15 +318,8 @@ export default function Settings() {
                   <Label>SMS Gateway API URL</Label>
                   <Input placeholder="https://api.sms.gateway.com" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Google Sheet Deploy URL</Label>
-                  <Input placeholder="https://script.google.com/..." />
-                </div>
               </div>
-              <Button className="mt-4">
-                <Save className="h-4 w-4 mr-2" />
-                Save Settings
-              </Button>
+              <Button><Save className="h-4 w-4 mr-2" />Save Settings</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -346,14 +339,42 @@ export default function Settings() {
                 <Label>Confirm New Password</Label>
                 <Input type="password" placeholder="••••••••" />
               </div>
-              <Button className="mt-4">
-                <Save className="h-4 w-4 mr-2" />
-                Update Password
-              </Button>
+              <Button><Save className="h-4 w-4 mr-2" />Update Password</Button>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Fee Item Dialog */}
+      <Dialog open={isAddFeeItemOpen} onOpenChange={setIsAddFeeItemOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Fee Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Fee Item Name *</Label>
+              <Input 
+                value={newFeeItem.label}
+                onChange={(e) => setNewFeeItem({...newFeeItem, label: e.target.value})}
+                placeholder="e.g., Sports Fee"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input 
+                value={newFeeItem.description}
+                onChange={(e) => setNewFeeItem({...newFeeItem, description: e.target.value})}
+                placeholder="Brief description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddFeeItemOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddFeeItem}>Add Fee Item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
