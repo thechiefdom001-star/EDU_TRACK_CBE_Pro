@@ -9,6 +9,8 @@ export const storageKeys = {
   attendance: `${STORAGE_PREFIX}attendance`,
   feeStructure: `${STORAGE_PREFIX}fee_structure`,
   feePayments: `${STORAGE_PREFIX}fee_payments`,
+  feeItems: `${STORAGE_PREFIX}fee_items`,
+  schoolInfo: `${STORAGE_PREFIX}school_info`,
   payroll: `${STORAGE_PREFIX}payroll`,
   library: `${STORAGE_PREFIX}library`,
   borrowings: `${STORAGE_PREFIX}borrowings`,

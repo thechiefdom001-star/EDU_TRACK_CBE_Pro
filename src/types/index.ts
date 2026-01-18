@@ -128,6 +128,34 @@ export interface Attendance {
   remarks?: string;
 }
 
+// Fee Item Interface (for managing individual fee types)
+export interface FeeItem {
+  id: string;
+  key: string;
+  label: string;
+  enabled: boolean;
+  description?: string;
+}
+
+// Default Fee Items
+export const DEFAULT_FEE_ITEMS: Omit<FeeItem, 'id'>[] = [
+  { key: 'tuitionFees', label: 'Tuition Fees', enabled: true, description: 'Main academic fees' },
+  { key: 'admissionFees', label: 'Admission Fees', enabled: true, description: 'One-time admission charge' },
+  { key: 'assessmentFees', label: 'Assessment Fees', enabled: true, description: 'Examination and assessment costs' },
+  { key: 'schoolIdFees', label: 'School ID Fees', enabled: true, description: 'Student ID card fee' },
+  { key: 'remedialFees', label: 'Remedial Fees', enabled: false, description: 'Extra classes support' },
+  { key: 'bookFund', label: 'Book Fund', enabled: true, description: 'Textbooks and learning materials' },
+  { key: 'uniformFees', label: 'Uniform Fees', enabled: true, description: 'School uniform costs' },
+  { key: 'boardingFees', label: 'Boarding Fees', enabled: false, description: 'For boarding students' },
+  { key: 'lunchFees', label: 'Lunch Fees', enabled: true, description: 'Daily lunch program' },
+  { key: 'breakfastFees', label: 'Breakfast Fees', enabled: false, description: 'Morning meal program' },
+  { key: 'tripFees', label: 'Trip Fees', enabled: true, description: 'Educational trips and excursions' },
+  { key: 'diaryFees', label: 'Diary Fees', enabled: true, description: 'Student diary/planner' },
+  { key: 'projectFees', label: 'Project Fees', enabled: true, description: 'Project materials and supplies' },
+  { key: 'ptaFees', label: 'PTA Fees', enabled: true, description: 'Parent-Teacher Association dues' },
+  { key: 'developmentFees', label: 'Development Fees', enabled: true, description: 'School infrastructure development' },
+];
+
 // Fee Structure Interface
 export interface FeeStructure {
   id: string;
@@ -163,6 +191,18 @@ export interface FeePayment {
   year: number;
   description: string;
   receivedBy: string;
+}
+
+// School Info Interface
+export interface SchoolInfo {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  motto?: string;
+  logo?: string;
+  county?: string;
+  subCounty?: string;
 }
 
 // Payroll Interface
