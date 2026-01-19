@@ -97,7 +97,7 @@ export interface Teacher {
 }
 
 // Assessment/Grade Interface
-export type ExamType = 'cat1' | 'cat2' | 'endTerm';
+export type ExamType = 'opener' | 'midTerm' | 'endTerm';
 
 export interface Assessment {
   id: string;
@@ -106,6 +106,7 @@ export interface Assessment {
   term: Term;
   year: number;
   examType: ExamType;
+  marks: number; // Raw marks out of 100
   grade: GradeLevel;
   points: number;
   remarks?: string;
@@ -114,10 +115,70 @@ export interface Assessment {
 }
 
 export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
-  cat1: 'CAT 1',
-  cat2: 'CAT 2',
+  opener: 'Opener',
+  midTerm: 'Mid-Term',
   endTerm: 'End Term',
 };
+
+// Grading boundaries for auto-grading (marks to grade)
+export interface GradingBoundary {
+  minMarks: number;
+  maxMarks: number;
+  grade: GradeLevel;
+}
+
+export const DEFAULT_GRADING_BOUNDARIES: GradingBoundary[] = [
+  { minMarks: 90, maxMarks: 100, grade: 'EE1' },
+  { minMarks: 80, maxMarks: 89, grade: 'EE2' },
+  { minMarks: 70, maxMarks: 79, grade: 'ME1' },
+  { minMarks: 60, maxMarks: 69, grade: 'ME2' },
+  { minMarks: 50, maxMarks: 59, grade: 'AE1' },
+  { minMarks: 40, maxMarks: 49, grade: 'AE2' },
+  { minMarks: 25, maxMarks: 39, grade: 'BE1' },
+  { minMarks: 0, maxMarks: 24, grade: 'BE2' },
+];
+
+// Get grade from marks
+export const getGradeFromMarks = (marks: number): GradeLevel => {
+  const boundary = DEFAULT_GRADING_BOUNDARIES.find(
+    b => marks >= b.minMarks && marks <= b.maxMarks
+  );
+  return boundary?.grade || 'BE2';
+};
+
+// All subjects for selection
+export const ALL_SUBJECTS = [
+  // Core Subjects
+  'English',
+  'Kiswahili',
+  'Mathematics',
+  'Community Service Learning',
+  // STEM
+  'Biology',
+  'Chemistry',
+  'Physics',
+  'General Science',
+  'Agriculture',
+  'Computer Studies',
+  'Home Science',
+  // Social Sciences
+  'History and Citizenship',
+  'Geography',
+  'CRE',
+  'IRE',
+  'HRE',
+  'Accounting',
+  'Economics',
+  'Commerce',
+  'Marketing',
+  'Literature in English',
+  'Fasihi ya Kiswahili',
+  // Arts & Sports
+  'Fine Arts',
+  'Music and Dance',
+  'Theatre and Film',
+  'Sports and Recreation',
+];
 
 // Attendance Interface
 export interface Attendance {
