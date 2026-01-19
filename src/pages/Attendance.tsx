@@ -8,20 +8,34 @@ import {
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Check, X, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, Check, X, Clock, AlertCircle, Search } from 'lucide-react';
 import { formatDate } from '@/lib/storage';
 import { toast } from 'sonner';
+import { PrintButton } from '@/components/common/PrintButton';
 
 export default function Attendance() {
   const { students, attendance, addAttendance } = useSchool();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const currentYear = new Date().getFullYear();
+  const [yearFilter, setYearFilter] = useState<string>(currentYear.toString());
+  const [termFilter, setTermFilter] = useState<string>('all');
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
   const filteredStudents = students.filter(student => {
-    if (selectedGrade === 'all') return true;
-    return student.grade.toString() === selectedGrade;
+    const matchesGrade = selectedGrade === 'all' || student.grade.toString() === selectedGrade;
+    const matchesLevel = selectedLevel === 'all' || student.schoolLevel === selectedLevel;
+    const matchesSearch = 
+      student.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesGrade && matchesLevel && matchesSearch;
   });
 
   const getAttendanceStatus = (studentId: string, date: string) => {
@@ -66,9 +80,72 @@ export default function Attendance() {
   return (
     <MainLayout title="Attendance" subtitle="Track daily student attendance">
       <div className="space-y-6">
+        {/* Filters Card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <div className="relative col-span-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search student..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="junior">Junior</SelectItem>
+                  <SelectItem value="senior">Senior</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => (
+                    <SelectItem key={g} value={g.toString()}>Grade {g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={termFilter} onValueChange={setTermFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Term" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Terms</SelectItem>
+                  <SelectItem value="1">Term 1</SelectItem>
+                  <SelectItem value="2">Term 2</SelectItem>
+                  <SelectItem value="3">Term 3</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map(y => (
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <input
@@ -78,21 +155,11 @@ export default function Attendance() {
                 className="px-3 py-2 border rounded-lg bg-background"
               />
             </div>
-            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter grade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Grades</SelectItem>
-                {[1,2,3,4,5,6,7,8,9,10,11,12].map(g => (
-                  <SelectItem key={g} value={g.toString()}>Grade {g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="text-muted-foreground">
+              Showing: <span className="font-medium">{formatDate(selectedDate)}</span>
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            Showing attendance for: <span className="font-medium">{formatDate(selectedDate)}</span>
-          </p>
+          <PrintButton tableId="attendance-table" title="Attendance Record" />
         </div>
 
         {/* Stats */}
@@ -157,71 +224,75 @@ export default function Attendance() {
             <CardTitle>Mark Attendance</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Adm. No.</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => {
-                  const status = getAttendanceStatus(student.id, selectedDate);
-                  return (
-                    <TableRow key={student.id} className="hover:bg-muted/30">
-                      <TableCell className="font-mono text-sm">{student.admissionNumber}</TableCell>
-                      <TableCell className="font-medium">
-                        {student.firstName} {student.lastName}
-                      </TableCell>
-                      <TableCell>Grade {student.grade}{student.stream}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={status?.status || ''} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {!status && (
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="bg-success/10 hover:bg-success/20 border-success/30 text-success"
-                              onClick={() => markAttendance(student.id, 'present')}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="bg-destructive/10 hover:bg-destructive/20 border-destructive/30 text-destructive"
-                              onClick={() => markAttendance(student.id, 'absent')}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="bg-warning/10 hover:bg-warning/20 border-warning/30 text-warning"
-                              onClick={() => markAttendance(student.id, 'late')}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
+            <div id="attendance-table">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Adm. No.</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Grade</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.map((student) => {
+                    const status = getAttendanceStatus(student.id, selectedDate);
+                    return (
+                      <TableRow key={student.id} className="hover:bg-muted/30">
+                        <TableCell className="font-mono text-sm">{student.admissionNumber}</TableCell>
+                        <TableCell className="font-medium">
+                          {student.firstName} {student.lastName}
+                        </TableCell>
+                        <TableCell>Grade {student.grade}{student.stream}</TableCell>
+                        <TableCell className="capitalize">{student.schoolLevel}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={status?.status || ''} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!status && (
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="bg-success/10 hover:bg-success/20 border-success/30 text-success"
+                                onClick={() => markAttendance(student.id, 'present')}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="bg-destructive/10 hover:bg-destructive/20 border-destructive/30 text-destructive"
+                                onClick={() => markAttendance(student.id, 'absent')}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="bg-warning/10 hover:bg-warning/20 border-warning/30 text-warning"
+                                onClick={() => markAttendance(student.id, 'late')}
+                              >
+                                <Clock className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredStudents.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No students found
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {filteredStudents.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No students found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
